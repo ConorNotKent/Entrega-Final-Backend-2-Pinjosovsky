@@ -107,18 +107,24 @@ class CartManager{
             const listaProductos= cart.products
             const listaPrecios=[]
             const productosComprados=[]
+
+// Como listaProductos tiene solo IDs, tengo que iterar sobre cada id y buscar toda la info del producto
             for(const item of listaProductos){
                 const productoCompleto= await productDao.getProductbyId(item.idProduct)
                 const prodStock=productoCompleto.stock
+// Si la cantidad en el carrito, es menor o igual al stock, lo elimino del carrito (fingiendo que se compro y no esta mas en el carro)
                     if(item.quantity <= prodStock){
                         productoCompleto.stock-=item.quantity
                         await productoCompleto.save()
+// Calculo el total de cada producto y lo guardo en un array llamado listaPrecios
                         const totalPorProducto= productoCompleto.price * item.quantity
                         listaPrecios.push(totalPorProducto)
+//Guardo los IDs de los productos "comprados" en el array productosComprados
                         const idP=productoCompleto._id
                         productosComprados.push(idP.toString())
                     }
             }
+//Sumo los precios en listaPrecios así me da el totalAmount
             const amount=listaPrecios.reduce((acc, current)=> acc+current, 0)
             const ticketInfo={
                 code:crypto.randomUUID(),
@@ -127,6 +133,8 @@ class CartManager{
             }
             const ticket= await new Ticket(ticketInfo)
             await ticket.save()
+//De listaProductos (aka, el carrito), filtro aquellos cuyo id NO esta en la lista de productosComprados
+//Dejando aquellos del carrito que no se pudieron comprar por falta de stock
             const listaFiltrada=listaProductos.filter((item)=> !productosComprados.includes(item.idProduct.toString()))
             cart.products=listaFiltrada
             await cart.save()
